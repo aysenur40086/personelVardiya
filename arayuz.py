@@ -14,56 +14,74 @@ def geometry(root, frame):
     root.geometry(f"{frame_width}x{frame_height}")
 
 def tabloSırala(tree, col, reverse=False):
+     # Tablonun belirli bir sütununa göre sıralama yapılır.
+    # 'tree' nesnesinin her öğesi için belirtilen sütundaki değer ve öğe bilgilerini içeren bir liste oluşturulur.
+   
     data = [(tree.set(item, col), item) for item in tree.get_children('')]
+        # Veriler, sıralama önceliğine göre sıralanır.
     data.sort(reverse=reverse)
+        # Sıralanmış verilere göre tablonun öğeleri yeniden konumlandırılır.
     for index, (val, item) in enumerate(data):
         tree.move(item, '', index)
+            # Sıralama başlığının tıklanma olayı için sıralama fonksiyonu atanır.
     tree.heading(col, command=lambda: tabloSırala(tree, col, not reverse))
 
 class App(TKMT.ThemedTKinterFrame):
     def __init__(self):
+                # ThemedTKinterFrame sınıfından türetilmiş bir pencere oluşturuluyor.
         super().__init__("Giriş Yap", "park", "dark", usecommandlineargs=True, useconfigfile=True)
         self.root.resizable(False, False)
         self.root.iconbitmap("icon.ico")
 
+        # Giriş bileşenlerini içeren bir çerçeve oluşturuluyor.
         self.girisFrame = Frame(self.root)
         self.girisFrame.grid()
 
+        # Kullanıcı adı, şifre girişi ve giriş butonu gibi arayüz elemanları oluşturuluyor.
         self.kullaniciAdiLabel = Label(self.girisFrame, text="Kullanıcı Adı:")
         self.kullaniciAdiEntry = Entry(self.girisFrame)
         self.sifreLabel = Label(self.girisFrame, text="Şifre:")
         self.sifreEntry = Entry(self.girisFrame, show="•")
         self.girisButton = Button(self.girisFrame, text="Giriş Yap", command=self.giris_yap)
 
+        # Arayüz elemanları grid düzenine yerleştiriliyor.
         self.kullaniciAdiLabel.grid(row=0, column=0, padx=10, pady=20)
         self.sifreLabel.grid(row=1, column=0, padx=10, pady=20)
         self.kullaniciAdiEntry.grid(row=0, column=1, padx=10, pady=20)
         self.sifreEntry.grid(row=1, column=1, padx=10, pady=20)
         self.girisButton.grid(row=2, column=0, columnspan=2, padx=10, pady=20)
 
+        # Uygulama çalıştırılıyor.
         self.run(cleanresize=False)
 
     def giris_yap(self):
+                # Kullanıcı adı ve şifre kontrol ediliyor.
         if self.kullaniciAdiEntry.get() != "" and self.sifreEntry.get() != "":
+                        # Fonk sınıfı üzerinden giriş yapılıyor.
             if Fonk(self.kullaniciAdiEntry.get(), self.sifreEntry.get()).giris_yap():
+                               # Kullanıcı türüne bağlı olarak Admin veya Personel penceresi oluşturuluyor.
                 self.kullanici = Fonk(kullaniciAdi=self.kullaniciAdiEntry.get()).kullanici_al()
                 self.girisFrame.destroy()
                 if self.kullanici[14] == "Yönetici":
-                    Admin(self.root, self.kullanici)
+                    Admin(self.root, self.kullanici)# Yönetici penceresi oluşturuluyor.
                 else:
-                    Personel(self.root, self.kullanici)
+                    Personel(self.root, self.kullanici)# Personel penceresi oluşturuluyor.
             else:
+                                # Giriş başarısız ise hata mesajı gösteriliyor.
                 messagebox.showerror("Hatalı Bilgi!", "Hatalı kullanıcı adı veya şifre.")
 
 class Admin(App):
     def __init__(self, root, kullanici):
+        # Ana pencerenin root özelliğini güncelliyor.
         self.root = root
+        # Kullanıcı bilgilerini saklıyor.
         self.kullanici = kullanici
+        # Başlık kısmını güncelliyor.
         self.root.title(f"Personel Takip Sitemi | {self.kullanici[1]} - Yönetici")
-
+        # Yönetici penceresine özgü bir alt çerçeve oluşturuyor.
         self.adminFrame = Frame(self.root)
         self.adminFrame.grid()
-
+        # Yönetici penceresindeki butonları oluşturuyor.
         self.yeniButton = Button(self.adminFrame, text="Yeni Personel", command=lambda: self.yeni_personel("yeni"))
         self.yeniButton.grid(row=0, column=0, padx=10, pady=10)
 
@@ -78,7 +96,7 @@ class Admin(App):
 
         self.ozelGunlerButton = Button(self.adminFrame, text="Özel Günler", command=self.ozel_gunler_ayarlar)
         self.ozelGunlerButton.grid(row=4, column=0, padx=10, pady=10)
-
+        # Treeview widget'ını oluşturuyor ve başlıkları ayarlıyor.
         self.tablo = Treeview(self.adminFrame, columns=("Sicil Numarası", "İsim", "Telefon", "Rol"), show="headings", selectmode="browse")
         self.tablo.heading("#1", text="Sicil Numarası", command=lambda: tabloSırala(self.tablo, "Sicil Numarası", False))
         self.tablo.heading("#2", text="İsim", command=lambda: tabloSırala(self.tablo, "Sicil Numarası", False))
@@ -89,21 +107,26 @@ class Admin(App):
         self.tablo.column("#3", width=120, stretch=False)
         self.tablo.column("#4", width=80, stretch=False)
         self.tablo.grid(row=0, column=1, columnspan=3, rowspan=5, padx=20, pady=20)
-
+        # Tabloyu güncelliyor.
         self.tablo_güncelle()
-
+        # Çift tıklama olayına bağlı bir işlev tanımlıyor.
         def kullanici_duzenle(event):
             if self.tablo.item(self.tablo.selection())["values"]:
+                                # Tablodan seçilen kullanıcıyı düzenleme işlevine yönlendiriyor.
                 self.yeni_personel("düzenle", Fonk(sicilNo=self.tablo.item(self.tablo.selection())["values"][0]).kullanici_al()[0])
-
+        # Çift tıklama olayını bağlıyor.
         self.tablo.bind("<Double-1>", kullanici_duzenle)
 
     def tablo_güncelle(self):
+            # Tablodaki tüm öğeleri temizliyor.
         self.tablo.delete(*self.tablo.get_children())
+            # Tüm kullanıcıları alarak tabloya ekliyor.
         for self.i in Fonk().kullanici_al():
+             # Tabloya yeni bir satır ekliyor.
+        # values parametresi, satırın sırasıyla sütunlarda hangi değerlere sahip olduğunu belirtir.
             self.tablo.insert("", "end", values=(self.i[11], (self.i[3], self.i[4]), self.i[9], self.i[14]))
 
-    def yeni_personel(self, tip=("yeni", "düzenle"), personel=None):
+    def yeni_personel(self, tip=("yeni", "düzenle"), personel=None): # Yeni Personel Ekleme
         self.yeniTop = Toplevel(self.root)
         self.yeniTop.withdraw()
         self.yeniTop.resizable(False, False)
@@ -246,7 +269,7 @@ class Admin(App):
 
         self.yeniTop.deiconify()
 
-    def izin_ayarlar(self):
+    def izin_ayarlar(self): #izin ayarlama
         self.izinTop = Toplevel(self.root)
         self.izinTop.withdraw()
         self.izinTop.resizable(False, False)
@@ -324,7 +347,7 @@ class Admin(App):
 
         self.izinTop.deiconify()
 
-    def vardiya_ayarlar(self):
+    def vardiya_ayarlar(self): #Vardiya ayarlama..
         self.vardiyaTop = Toplevel(self.root)
         self.vardiyaTop.withdraw()
         self.vardiyaTop.resizable(False, False)
@@ -522,7 +545,7 @@ class Admin(App):
 
         self.vardiyaTop.deiconify()
 
-    def mesai_ayarlar(self):
+    def mesai_ayarlar(self): # Mesai Ayarlama
         self.mesaiTop = Toplevel(self.root)
         self.mesaiTop.withdraw()
         self.mesaiTop.resizable(False, False)
@@ -615,7 +638,7 @@ class Admin(App):
 
         self.mesaiTop.deiconify()
 
-    def ozel_gunler_ayarlar(self):
+    def ozel_gunler_ayarlar(self): # Özel gün ayarlama
         self.gunlerTop = Toplevel(self.root)
         self.gunlerTop.withdraw()
         self.gunlerTop.resizable(False, False)
@@ -677,27 +700,30 @@ class Admin(App):
 
         self.gunlerTop.deiconify()
 
-class Personel(TKMT.ThemedTKinterFrame):
+class Personel(TKMT.ThemedTKinterFrame):# vardiya ekleme
     def __init__(self, root, kullanici):
+                # Pencere ve kullanıcı bilgilerini tanımla
         self.root = root
         self.kullanici = kullanici
+                # Pencere başlığını güncelle
         self.root.title(f"Personel Takip Sitemi | {self.kullanici[1]} - {self.kullanici[14]}")
 
+        # Çerçeveleri oluştur
         self.tabloFrame = Frame(self.root)
         self.altFrame = Frame(self.root)
         self.vardiyaFrame = LabelFrame(self.tabloFrame, text="Vardiyalar")
         self.izinFrame = LabelFrame(self.tabloFrame, text="İzinler")
-
+        # Çerçeveleri düzenle
         self.tabloFrame.grid(row=0, column=0)
         self.altFrame.grid(row=1, column=0)
         self.vardiyaFrame.grid(row=0, column=0, padx=10, pady=10)
         self.izinFrame.grid(row=0, column=1, padx=10, pady=10)
-
+        # Vardiyalar ve izinler için tabloları güncelleme fonksiyonlarını tanımla
         def vardiyaTabloGüncelle():
             self.vardiyalarTablo.delete(*self.vardiyalarTablo.get_children())
             for self.i in Fonk(sicilNo=self.kullanici[11]).kullanici_al(tablo="vardiyalar"):
                 self.vardiyalarTablo.insert("", "end", values=(self.i[4], self.i[5], self.i[6]))
-
+        # Vardiyalar tablosunu oluştur ve güncelle
         self.vardiyalarTablo = Treeview(self.vardiyaFrame, columns=("Vardiya Tarihi", "Vardiya Yeri", "Vardiya Saati"), show="headings", selectmode="browse")
         self.vardiyalarTablo.heading("#1", text="Vardiya Tarihi")
         self.vardiyalarTablo.heading("#2", text="Vardiya Yeri")
@@ -707,7 +733,7 @@ class Personel(TKMT.ThemedTKinterFrame):
         self.vardiyalarTablo.column("#3", width=150)
         self.vardiyalarTablo.grid(row=0, column=0, padx=10, pady=10)
         vardiyaTabloGüncelle()
-
+        # İzinler tablosunu oluştur ve güncelle
         def izinTabloGüncelle():
             self.izinlerTablo.delete(*self.izinlerTablo.get_children())
             for self.i in Fonk(sicilNo=self.kullanici[11]).kullanici_al(tablo="izinler"):
@@ -720,7 +746,7 @@ class Personel(TKMT.ThemedTKinterFrame):
         self.izinlerTablo.column("#2", width=150)
         self.izinlerTablo.grid(row=0, column=0, padx=10, pady=10)
         izinTabloGüncelle()
-
+        # Listeleri PDF olarak kaydetme fonksiyonunu tanımla
         def liste_al(tip2=("vardiya", "izin")):
             self.path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF dosyası", "*.pdf")], initialfile=f'{datetime.now().strftime("%Y-%m-%d")}_{tip2}.pdf')
             if self.path:
